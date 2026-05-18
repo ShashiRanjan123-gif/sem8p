@@ -10,7 +10,7 @@ const axios = require("axios");
 const app = express();
 
 /* =========================
-   MIDDLEWARES
+   MIDDLEWARE
 ========================= */
 
 app.use(express.json());
@@ -27,7 +27,7 @@ app.use(
 
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected"))
+  .then(() => console.log("MongoDB Connected Successfully"))
   .catch((err) => console.log(err));
 
 /* =========================
@@ -138,7 +138,7 @@ const authMiddleware = async (req, res, next) => {
 app.get("/", (req, res) => {
   res.json({
     success: true,
-    message: "AI Employee Analytics Backend Running",
+    message: "AI Employee Analytics Backend Running Successfully",
   });
 });
 
@@ -358,7 +358,7 @@ app.put("/api/employees/:id", authMiddleware, async (req, res) => {
 
     res.json({
       success: true,
-      message: "Employee updated",
+      message: "Employee updated successfully",
       employee,
     });
   } catch (error) {
@@ -403,7 +403,7 @@ app.post("/api/ai/recommend", authMiddleware, async (req, res) => {
     }
 
     const prompt = `
-You are an HR AI assistant.
+You are a professional HR AI Assistant.
 
 Analyze this employee:
 
@@ -415,16 +415,28 @@ Experience: ${employeeData.experience}
 
 Provide:
 1. Promotion Recommendation
-2. Training Suggestions
-3. Performance Feedback
-4. Employee Ranking Suggestion
+2. Employee Ranking
+3. Training Suggestions
+4. Performance Feedback
+5. Skill Improvement Suggestions
+
+Response should be professional and detailed.
 `;
 
+    console.log("Sending request to OpenRouter AI...");
+
     const response = await axios.post(
-      `${process.env.OPENROUTER_BASE_URL}/chat/completions`,
+      "https://openrouter.ai/api/v1/chat/completions",
       {
-        model: "openai/gpt-3.5-turbo",
+        model: "deepseek/deepseek-chat-v3-0324:free",
+
         messages: [
+          {
+            role: "system",
+            content:
+              "You are a professional AI HR assistant.",
+          },
+
           {
             role: "user",
             content: prompt,
@@ -434,24 +446,42 @@ Provide:
       {
         headers: {
           Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+
           "Content-Type": "application/json",
+
+          "HTTP-Referer": "https://sem8p.onrender.com",
+
+          "X-Title": "AI Employee Analytics",
         },
       }
     );
 
-    const aiResult = response.data.choices[0].message.content;
+    console.log("AI Response Generated");
+
+    const aiResult =
+      response.data?.choices?.[0]?.message?.content ||
+      "No AI response generated";
 
     res.json({
       success: true,
       recommendation: aiResult,
     });
+
   } catch (error) {
+
+    console.log("========== AI ERROR ==========");
+
     console.log(error.response?.data || error.message);
+
+    console.log("================================");
 
     res.status(500).json({
       success: false,
-      message: "AI recommendation failed",
-      error: error.message,
+
+      message:
+        error.response?.data?.error?.message ||
+        error.message ||
+        "AI recommendation failed",
     });
   }
 });
@@ -463,7 +493,7 @@ Provide:
 app.get("/api/protected", authMiddleware, (req, res) => {
   res.json({
     success: true,
-    message: "Protected route accessed",
+    message: "Protected route accessed successfully",
     user: req.user,
   });
 });
@@ -473,12 +503,14 @@ app.get("/api/protected", authMiddleware, (req, res) => {
 ========================= */
 
 app.use((err, req, res, next) => {
+
   console.log(err);
 
   res.status(500).json({
     success: false,
-    message: "Server Error",
+    message: "Internal Server Error",
   });
+
 });
 
 /* =========================
